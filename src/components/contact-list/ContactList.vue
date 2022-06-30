@@ -1,55 +1,81 @@
 <template>
-  <div>
-    <q-card flat class="transparent" dark square>
-      <q-toolbar class="bg-dark">
-        <q-toolbar-title> Contacts </q-toolbar-title>
-      </q-toolbar>
-      <!-- {{ users }} -->
-      <q-card-section class="px-xs">
-        <q-input
-          color="black"
-          dense
-          outlined
-          rounded
-          v-model="search"
-          placeholder="search contacts"
-        >
-          <template v-slot:append>
-            <q-icon name="las la-search" />
-          </template>
-        </q-input>
-      </q-card-section>
-    </q-card>
+  <q-card flat square style="width: 560px">
+    <q-toolbar>
+      <q-toolbar-title> Contacts </q-toolbar-title>
+      <q-space />
 
-    <q-list separator>
-      <Contact
-        v-for="contact in users"
-        :key="contact.id"
-        :username="contact.username"
-        :email="contact.email"
-        :newMessage="contact.newMessage"
-        :_id="contact._id"
+      <q-btn
+        icon="las la-times"
+        @click="() => $emit('close')"
+        color="dark"
+        size="sm"
+        flat
+        round
       />
-    </q-list>
-  </div>
+    </q-toolbar>
+    <q-card-section class="px-xs">
+      <q-input
+        color="black"
+        dense
+        outlined
+        rounded
+        v-model="search"
+        placeholder="search contacts"
+        @keyup.enter="handleSearch"
+        clearable
+      >
+        <template v-slot:append>
+          <q-btn
+            icon="las la-search"
+            flat
+            round
+            color="dark"
+            @click="handleSearch"
+            size="sm"
+          />
+          <!-- <q-icon name="las la-search" /> -->
+        </template>
+      </q-input>
+    </q-card-section>
+    <q-card-section>
+      <q-list separator>
+        <q-scroll-area
+          :style="$q.screen.lt.lg ? 'height: 200px' : 'height: 300px'"
+        >
+          <Contact
+            v-for="contact in users"
+            :key="contact.id"
+            :username="contact.username"
+            :email="contact.email"
+            :newMessage="contact.newMessage"
+            :_id="contact._id"
+            :date="contact.createdAt"
+            @close="() => $emit('close')"
+          />
+        </q-scroll-area>
+      </q-list>
+    </q-card-section>
+  </q-card>
 </template>
 
 <script setup>
 import Contact from "./Contact.vue";
-import Navbar from "../navigation/Navbar.vue";
 
-import { ref } from "vue";
+import { computed, onMounted, ref, toRef } from "vue";
 import { useQuasar } from "quasar";
 import { useAxios } from "src/common/composables";
 import { useConfirmation } from "src/common/composables/use-confirmation-dialog";
 import { useAuthStore } from "src/stores/auth-store";
+import { useUserStore } from "src/stores/user-store";
 import { useRouter } from "vue-router";
 
 const props = defineProps(["users"]);
+const emit = defineEmits(["close"]);
 
 const $q = useQuasar();
 const gistAxios = useAxios();
 const authStore = useAuthStore();
+const userStore = useUserStore();
 const router = useRouter();
 
 const search = ref("");
@@ -98,31 +124,21 @@ const contacts = [
   },
 ];
 
-const handleLogout = async () => {
-  const confirmed = await useConfirmation($q.dialog, "Log out?");
+const handleSearch = async () => {
+  const needle = search.value.toLowerCase();
 
-  if (!confirmed) return;
+  if (!needle || needle.trim().length === 0) return;
 
   $q.loading.show();
 
   try {
-    const { data, message } = await gistAxios.post("/auth/logout");
+    const { data, message } = await gistAxios.get(`/users?search=${needle}`);
 
-    authStore.isAuthenticated = false;
-    authStore.account = null;
-
-    router.push({ path: "/" });
-
-    $q.notify({
-      message,
-      color: "positive",
-      icon: "las la-thumbs-up",
-    });
+    userStore.users = data.users;
   } catch (err) {
     $q.notify({
       message: err,
       color: "negative",
-      icon: "las la-exclamation",
     });
   }
 

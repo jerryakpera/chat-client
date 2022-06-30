@@ -1,7 +1,14 @@
 <template>
-  <q-card-actions class="q-pa-md">
+  <q-card-actions class="q-px-md q-pt-md">
     <div class="text-caption">
-      <!-- <q-icon name="las la-comment-dots" left size="sm" color="black" /> -->
+      <q-icon name="las la-bell" left size="sm" color="black">
+        <q-badge
+          v-if="socketStore.notify"
+          floating
+          color="primary"
+          :label="socketStore.notifications.length"
+        />
+      </q-icon>
       <div class="text-weight-bold text-black">
         {{ authStore.account.username }}
       </div>
@@ -25,12 +32,14 @@
 import { useQuasar } from "quasar";
 import { useAxios } from "src/common/composables";
 import { useConfirmation } from "src/common/composables/use-confirmation-dialog";
-import { useAuthStore } from "src/stores/auth-store";
+import { useAuthStore } from "stores/auth-store";
+import { useSocketStore } from "stores/socket-store";
 import { useRouter } from "vue-router";
 
 const $q = useQuasar();
 const gistAxios = useAxios();
 const authStore = useAuthStore();
+const socketStore = useSocketStore();
 const router = useRouter();
 
 const handleLogout = async () => {

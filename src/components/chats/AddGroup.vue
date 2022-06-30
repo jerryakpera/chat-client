@@ -1,76 +1,57 @@
 <template>
-  <q-card-actions>
-    <q-space />
+  <q-card style="width: 450px">
+    <q-card-section class="row items-center q-pb-none">
+      <div class="text-h6">Create a new group chat</div>
+      <q-space />
+      <q-btn icon="las la-times" size="sm" flat round dense v-close-popup />
+    </q-card-section>
 
-    <q-btn
-      color="secondary"
-      icon="las la-plus"
-      label="Group"
-      size="sm"
-      @click="addGroupDialog = true"
-    />
+    <q-card-section>
+      <q-input
+        autofocus
+        label="Group name"
+        v-model="chatname"
+        outlined
+        :rules="[isRequired]"
+        ref="chatnameRef"
+        class="q-mb-sm"
+      />
+      <q-input
+        label="Group description"
+        v-model="description"
+        outlined
+        class="q-mb-sm"
+        type="textarea"
+        autogrow
+      />
+      <q-select
+        outlined
+        v-model="selected"
+        multiple
+        use-input
+        input-debounce="0"
+        :options="options"
+        use-chips
+        stack-label
+        @filter="filterFn"
+        label="Select users to add to group"
+        option-label="username"
+      >
+        <template v-slot:no-option>
+          <q-item>
+            <q-item-section class="text-grey"> No results </q-item-section>
+          </q-item>
+        </template>
+      </q-select>
+    </q-card-section>
 
-    <q-dialog v-model="addGroupDialog">
-      <q-card style="width: 450px">
-        <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">Create a new group chat</div>
-          <q-space />
-          <q-btn icon="las la-times" size="sm" flat round dense v-close-popup />
-        </q-card-section>
+    <q-card-actions class="q-pa-md">
+      <q-space />
 
-        <q-card-section>
-          <q-input
-            label="Group name"
-            v-model="chatname"
-            outlined
-            :rules="[isRequired]"
-            ref="chatnameRef"
-            class="q-mb-sm"
-          />
-          <q-input
-            label="Group description"
-            v-model="description"
-            outlined
-            class="q-mb-sm"
-            type="textarea"
-            autogrow
-          />
-          <q-select
-            outlined
-            v-model="selected"
-            multiple
-            use-input
-            input-debounce="0"
-            :options="options"
-            use-chips
-            stack-label
-            @filter="filterFn"
-            label="Select users to add to group"
-            option-label="username"
-          >
-            <template v-slot:no-option>
-              <q-item>
-                <q-item-section class="text-grey"> No results </q-item-section>
-              </q-item>
-            </template>
-          </q-select>
-        </q-card-section>
-
-        <q-card-actions class="q-pa-md">
-          <q-space />
-
-          <q-btn
-            label="Cancel"
-            color="negative"
-            v-close-popup
-            outline
-            unelevated
-          />
-          <q-btn label="Create" color="primary" @click="createGroup" />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-  </q-card-actions>
+      <q-btn label="Cancel" color="negative" v-close-popup outline unelevated />
+      <q-btn label="Create" color="primary" @click="createGroup" />
+    </q-card-actions>
+  </q-card>
 </template>
 
 <script setup>
@@ -82,9 +63,10 @@ import { useValidation } from "src/common/composables/use-validation";
 import { useConfirmation } from "src/common/composables/use-confirmation-dialog";
 import { useAxios } from "src/common/composables/axios";
 
+const emit = defineEmits(['close']);
+
 const $q = useQuasar();
 const gistAxios = useAxios();
-const addGroupDialog = ref(false);
 const chatname = ref("");
 const chatnameRef = ref(null);
 const description = ref("");
@@ -101,7 +83,7 @@ const options = ref([]);
 const filterFn = (val, update) => {
   if (val === "") {
     update(() => {
-      options.value = userStore.users;
+      options.value = userStore.allUsers;
 
       // here you have access to "ref" which
       // is the Vue reference of the QSelect
@@ -111,7 +93,7 @@ const filterFn = (val, update) => {
 
   update(() => {
     const needle = val.toLowerCase();
-    options.value = userStore.users.filter((v) => {
+    options.value = userStore.allUsers.filter((v) => {
       const match =
         v.username.toLowerCase().indexOf(needle) > -1 ||
         v.email.toLowerCase().indexOf(needle) > -1;
@@ -134,6 +116,7 @@ const createGroup = async () => {
   };
 
   const confirmed = await useConfirmation($q.dialog, "Create new group chat?");
+  if (!confirmed) return;
 
   $q.loading.show();
 
@@ -141,7 +124,7 @@ const createGroup = async () => {
     const { data, message } = await gistAxios.post("/chat/groups", requestObj);
 
     chatStore.chat = data.chat;
-    chatStore.chats.push(data.chat);
+    chatStore.addChat(data.chat);
 
     $q.notify({
       message,
@@ -152,7 +135,7 @@ const createGroup = async () => {
     description.value = "";
     selected.value = null;
 
-    addGroupDialog.value = false;
+    emit("close");
   } catch (err) {
     $q.notify({
       message: err,
@@ -164,6 +147,6 @@ const createGroup = async () => {
 };
 
 onMounted(() => {
-  options.value = [...userStore.users];
+  options.value = [...userStore.allUsers];
 });
 </script>

@@ -15,7 +15,7 @@
 
     <q-item-section side>
       <span class="text-caption text-black">
-        {{ moment(1655920110781).startOf("minute").fromNow() }}
+        {{ moment(date).startOf("minute").fromNow() }}
       </span>
     </q-item-section>
   </q-item>
@@ -28,7 +28,8 @@ import { useQuasar } from "quasar";
 import { useAxios } from "src/common/composables/axios";
 import { useChatStore } from "stores/chat-store";
 
-const props = defineProps(["username", "email", "_id"]);
+const props = defineProps(["username", "email", "_id", "date"]);
+const emit = defineEmits([close]);
 
 const $q = useQuasar();
 const gistAxios = useAxios();
@@ -48,16 +49,14 @@ const getChat = async () => {
   $q.loading.show();
 
   try {
-    const { data } = await gistAxios.get(`/chat/${props._id}`);
+    const { data } = await gistAxios.get(`/users/chat/${props._id}`);
 
+    chatStore.addChat(data.chat);
     chatStore.chat = data.chat;
 
-    const chatExists = chatStore.chats.find(
-      (chat) => String(chat._id) === String(data.chat._id)
-    );
-
-    if (!chatExists) chatStore.chats.push(data.chat);
+    emit("close");
   } catch (err) {
+    console.log(err);
     $q.notify({
       message: err,
       color: "negative",

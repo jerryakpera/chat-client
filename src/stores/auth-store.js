@@ -7,5 +7,6 @@ export const useAuthStore = defineStore("auth", {
       username: "jta11developer",
       email: "jta11developer@gmail.com",
     },
+    connected: false,
   }),
 });
